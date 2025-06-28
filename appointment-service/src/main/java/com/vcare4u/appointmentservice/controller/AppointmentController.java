@@ -1,0 +1,87 @@
+package com.vcare4u.appointmentservice.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.vcare4u.appointmentservice.config.JwtUtils;
+import com.vcare4u.appointmentservice.dto.AppointmentDto;
+import com.vcare4u.appointmentservice.service.AppointmentService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+@RestController
+@RequestMapping("/api/appointments")
+@RequiredArgsConstructor
+public class AppointmentController {
+
+    private final AppointmentService appointmentService;
+    private final JwtUtils jwtUtils;
+    @PostMapping
+    public ResponseEntity<AppointmentDto> createAppointment(@RequestBody AppointmentDto dto) {
+        return ResponseEntity.ok(appointmentService.createAppointment(dto));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AppointmentDto> getAppointmentById(@PathVariable Long id, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return ResponseEntity.ok(appointmentService.getAppointmentById(id, token));
+    }
+
+
+    // ADMIN only
+    @GetMapping
+    public ResponseEntity<List<AppointmentDto>> getAllAppointments() {
+        return ResponseEntity.ok(appointmentService.getAllAppointments());
+    }
+
+    // PATIENT
+    @GetMapping("/my")
+    public ResponseEntity<List<AppointmentDto>> getPatientAppointments(@RequestParam Long patientId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId));
+    }
+
+    // DOCTOR
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<AppointmentDto>> getDoctorAppointments(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByDoctor(doctorId));
+    }
+
+    // DOCTOR
+    @PutMapping("/{id}/status")
+    public ResponseEntity<AppointmentDto> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(appointmentService.updateAppointmentStatus(id, body.get("status")));
+    }
+
+    // ADMIN
+    @PutMapping("/{id}")
+    public ResponseEntity<AppointmentDto> updateAppointment(@PathVariable Long id, @RequestBody AppointmentDto dto) {
+        return ResponseEntity.ok(appointmentService.updateAppointment(id, dto));
+    }
+
+    // ADMIN
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
+        appointmentService.deleteAppointment(id);
+        return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/patient/{email:.+}")
+    public ResponseEntity<List<AppointmentDto>> getAppointmentsByPatientEmail(
+            @PathVariable String email,
+            HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return ResponseEntity.ok(appointmentService.getAppointmentsByPatientEmail(email, token));
+    }
+
+
+}

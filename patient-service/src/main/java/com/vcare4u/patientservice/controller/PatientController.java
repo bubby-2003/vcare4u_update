@@ -1,0 +1,107 @@
+package com.vcare4u.patientservice.controller;
+
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.vcare4u.patientservice.config.JwtUtils; // your own jwt util class
+import com.vcare4u.patientservice.dto.PatientDto;
+import com.vcare4u.patientservice.service.PatientService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/patients")
+@RequiredArgsConstructor
+public class PatientController {
+
+    private final PatientService patientService;
+    private final JwtUtils jwtUtils;
+
+    @PostMapping
+    public ResponseEntity<PatientDto> createPatient(@Valid @RequestBody PatientDto dto) {
+        return ResponseEntity.ok(patientService.createPatient(dto));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PatientDto> getPatient(@PathVariable Long id, HttpServletRequest request) {
+        String username = jwtUtils.extractUsernameFromRequest(request);
+        String role = jwtUtils.extractRoleFromRequest(request);
+
+        PatientDto dto = patientService.getPatientById(id);
+
+        // ✅ Allow all roles to access by ID
+        if ("ADMIN".equals(role) || "PATIENT".equals(role) || "DOCTOR".equals(role)) {
+            return ResponseEntity.ok(dto);
+        }
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+
+
+    @GetMapping
+    public ResponseEntity<List<PatientDto>> getAllPatients(HttpServletRequest request) {
+        String role = jwtUtils.extractRoleFromRequest(request);
+        if (!"ADMIN".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // ✅ prevent PATIENT
+        }
+
+        return ResponseEntity.ok(patientService.getAllPatients());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<PatientDto> updatePatient(@PathVariable Long id, @RequestBody PatientDto dto, HttpServletRequest request) {
+        String role = jwtUtils.extractRoleFromRequest(request);
+        if (!"ADMIN".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        return ResponseEntity.ok(patientService.updatePatient(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePatient(@PathVariable Long id) {
+        patientService.deletePatient(id);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @GetMapping("/me")
+    public ResponseEntity<PatientDto> getLoggedInPatient(@RequestHeader("Authorization") String token) {
+        String email = jwtUtils.extractUsername(token.substring(7));
+        PatientDto dto = patientService.getByEmail(email);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<PatientDto> updateLoggedInPatient(@RequestHeader("Authorization") String token,
+                                                            @RequestBody PatientDto patientDto) {
+        String email = jwtUtils.extractUsername(token.substring(7));
+        PatientDto updatedDto = patientService.updateByEmail(email, patientDto);
+        return ResponseEntity.ok(updatedDto);
+    }
+    @GetMapping("/email/{email}")
+    public ResponseEntity<PatientDto> getPatientByEmail(@PathVariable String email, HttpServletRequest request) {
+        String role = jwtUtils.extractRoleFromRequest(request);
+        
+        if (!"ADMIN".equals(role) && !"DOCTOR".equals(role) && !"PATIENT".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        return ResponseEntity.ok(patientService.getByEmail(email));
+    }
+
+    
+}

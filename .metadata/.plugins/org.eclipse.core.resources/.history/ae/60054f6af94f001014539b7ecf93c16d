@@ -1,0 +1,5 @@
+package com.vcare4u.appointmentservice.exception;
+
+public class GlobalExceptionHandler {
+
+}

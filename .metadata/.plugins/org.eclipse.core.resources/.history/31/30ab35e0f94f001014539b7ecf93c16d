@@ -1,0 +1,5 @@
+package com.vcare4u.patientservice.exception;
+
+public class GlobalExceptionHandler {
+
+}

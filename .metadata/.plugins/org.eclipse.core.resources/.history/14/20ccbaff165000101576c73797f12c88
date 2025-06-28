@@ -1,0 +1,61 @@
+package com.vcare4u.doctorservice.controller;
+
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.vcare4u.doctorservice.config.JwtUtils;
+import com.vcare4u.doctorservice.dto.DoctorDto;
+import com.vcare4u.doctorservice.service.DoctorService;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/doctors")
+@RequiredArgsConstructor
+public class DoctorController {
+
+    private final DoctorService doctorService;
+    private final JwtUtils jwtUtils;
+    @PostMapping
+    public ResponseEntity<DoctorDto> createDoctor(@RequestBody DoctorDto dto) {
+        return ResponseEntity.ok(doctorService.createDoctor(dto));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<DoctorDto> getDoctorById(@PathVariable Long id) {
+        return ResponseEntity.ok(doctorService.getDoctorById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<DoctorDto>> getAllDoctors() {
+        return ResponseEntity.ok(doctorService.getAllDoctors());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<DoctorDto> updateDoctor(@PathVariable Long id, @RequestBody DoctorDto dto) {
+        return ResponseEntity.ok(doctorService.updateDoctor(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDoctor(@PathVariable Long id) {
+        doctorService.deleteDoctor(id);
+        return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/me")
+    public ResponseEntity<DoctorDto> getLoggedInDoctor(@RequestHeader("Authorization") String token) {
+        String jwt = token.substring(7); // remove "Bearer "
+        String email = jwtUtils.extractUsername(jwt);
+        return ResponseEntity.ok(doctorService.getDoctorByEmail(email));
+    }
+
+}

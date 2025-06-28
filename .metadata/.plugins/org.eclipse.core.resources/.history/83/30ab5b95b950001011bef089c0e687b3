@@ -1,0 +1,58 @@
+package com.vcare4u.doctorservice;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vcare4u.authservice.exception.ResourceNotFoundException;
+import com.vcare4u.doctorservice.controller.DoctorController;
+import com.vcare4u.doctorservice.dto.DoctorDto;
+import com.vcare4u.doctorservice.service.DoctorService;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.HashMap;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(DoctorController.class)
+public class GlobalExceptionHandlerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private DoctorService doctorService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    void testHandleResourceNotFoundException() throws Exception {
+        Mockito.when(doctorService.getDoctorById(anyLong()))
+                .thenThrow(new ResourceNotFoundException("Doctor"));
+
+        mockMvc.perform(get("/api/doctors/10"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Resource Not Found"))
+                .andExpect(jsonPath("$.message").value("Doctor not found with id : '10'"))
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void testHandleGenericException() throws Exception {
+        Mockito.when(doctorService.getDoctorById(anyLong()))
+                .thenThrow(new RuntimeException("Unexpected server error"));
+
+        mockMvc.perform(get("/api/doctors/99"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("Unexpected server error"))
+                .andExpect(jsonPath("$.status").value(500));
+    }
+}

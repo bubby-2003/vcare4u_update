@@ -1,0 +1,43 @@
+package com.vcare4u.patientservice.config;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
+
+                // ✅ ADMIN can get all patients
+                .requestMatchers(HttpMethod.GET, "/api/patients").hasRole("ADMIN")
+
+                // ✅ ADMIN or PATIENT can create a profile
+                .requestMatchers(HttpMethod.POST, "/api/patients").hasAnyRole("ADMIN", "PATIENT")
+
+                // ✅ GET, PUT, DELETE by ID are allowed to all roles
+                // fine-grained control is handled in controller (ownership checks)
+                .requestMatchers(HttpMethod.GET, "/api/patients/**").hasAnyRole("ADMIN", "PATIENT", "DOCTOR")
+                .requestMatchers(HttpMethod.PUT, "/api/patients/**").hasAnyRole("ADMIN", "PATIENT")
+                .requestMatchers(HttpMethod.DELETE, "/api/patients/**").hasAnyRole("ADMIN", "PATIENT")
+
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
+    }
+}

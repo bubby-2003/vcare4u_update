@@ -1,0 +1,38 @@
+package com.vcare4u.patientservice.config;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+@Configuration
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+            	    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
+            	    .requestMatchers(HttpMethod.GET, "/api/patients/me").hasRole("PATIENT")
+            	    .requestMatchers(HttpMethod.PUT, "/api/patients/me").hasRole("PATIENT") // ✅ add this
+            	    .requestMatchers(HttpMethod.GET, "/api/patients/email/**").hasAnyRole("ADMIN", "DOCTOR", "PATIENT")
+            	    .requestMatchers(HttpMethod.GET, "/api/patients").hasAnyRole("ADMIN", "PATIENT")
+            	    .requestMatchers(HttpMethod.POST, "/api/patients").hasAnyRole("ADMIN", "PATIENT")
+            	    .requestMatchers(HttpMethod.PUT, "/api/patients/**").hasRole("ADMIN")
+            	    .requestMatchers(HttpMethod.DELETE, "/api/patients/**").hasRole("ADMIN")
+            	    .requestMatchers(HttpMethod.GET, "/api/patients/**").hasAnyRole("ADMIN", "PATIENT", "DOCTOR")
+            	    .anyRequest().authenticated()
+            	)
+
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
+    }
+}
